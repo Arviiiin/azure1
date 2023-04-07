@@ -1,0 +1,362 @@
+-- Source fully made by Actyrn#7104, except the UI library ofc
+-- USE THE LOADSTRING FOR AUTOMATIC UPDATES!!
+
+repeat wait() until game:IsLoaded()
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Arviiiin/azure2/main/ww2"))()
+
+local runServ, localPlr, velDot =
+	game.RunService, game.Players.LocalPlayer, Drawing.new("Circle")
+
+library = library
+Drawing = Drawing
+
+local Settings = {
+	VelReveal = {
+		Enabled = nil,
+		Prediction = nil,
+		HitPart = nil
+	},
+
+	Custom = {
+		Enabled = nil,
+		X = nil,
+		Y = nil,
+		Z = nil
+	},
+
+	Up = {
+		Enabled = nil,
+		Amount = nil
+	},
+
+	Down = {
+		Enabled = nil,
+		Amount = nil
+	},
+
+	VelMultiply = {
+		Enabled = nil,
+		Amount = nil
+	},
+
+	LookVec = {
+		Enabled = nil,
+		Amount = nil
+	},
+
+	Reverse = {
+		Enabled = nil,
+		Amount = nil,
+		Type = nil
+	},
+
+	Confusion = {
+		Enabled = nil,
+		Amount = nil
+	},
+
+	Desync = {
+		Enabled = nil,
+		X = nil,
+		Y = nil,
+		Z = nil,
+		Angles = nil
+	},
+
+	Resolver = {
+		Enabled = nil,
+		Prediction = nil,
+		Type = nil
+	}
+}
+
+velDot.Filled = true
+velDot.Thickness = 1
+velDot.Transparency = 1
+velDot.Radius = 6.9
+
+runServ.Heartbeat:Connect(function()
+	local Pos, OnScreen = workspace.CurrentCamera:WorldToViewportPoint(
+		localPlr.Character[Settings.VelReveal.HitPart].CFrame.Position +
+			(localPlr.Character[Settings.VelReveal.HitPart].AssemblyLinearVelocity *
+				Settings.VelReveal.Prediction))
+
+	if Settings.VelReveal.Enabled and OnScreen then
+		velDot.Visible = true
+		velDot.Position = Vector2.new(Pos.X, Pos.Y)
+	else
+		velDot.Visible = false
+	end
+end)
+
+runServ.Heartbeat:Connect(function()
+	local char = localPlr.Character
+	local hrp = char.HumanoidRootPart
+	local velocity, cFrame =
+		hrp.Velocity, hrp.CFrame
+
+	if Settings.Custom.Enabled then
+		hrp.Velocity =
+			Vector3.new(Settings.Custom.X, Settings.Custom.Y, Settings.Custom.Z)
+		runServ.RenderStepped:Wait()
+		hrp.Velocity = velocity
+	end
+
+	if Settings.Up.Enabled then
+		hrp.Velocity =
+			Vector3.new(0, Settings.Up.Amount, 0)
+		runServ.RenderStepped:Wait()
+		hrp.Velocity = velocity
+	end
+
+	if Settings.Down.Enabled then
+		hrp.Velocity =
+			Vector3.new(0, -Settings.Down.Amount, 0)
+		runServ.RenderStepped:Wait()
+		hrp.Velocity = velocity
+	end
+
+	if Settings.VelMultiply.Enabled then
+		hrp.Velocity = velocity *
+			Settings.VelMultiply.Amount
+		runServ.RenderStepped:Wait()
+		hrp.Velocity = velocity
+	end
+
+	if Settings.LookVec.Enabled then
+		hrp.Velocity = cFrame.lookVector *
+			Settings.LookVec.Amount
+		runServ.RenderStepped:Wait()
+		hrp.Velocity = velocity
+	end
+
+	if Settings.Reverse.Enabled then
+		if Settings.Reverse.Type == "CFrame" then
+			hrp.CFrame = cFrame -
+				char.Humanoid.MoveDirection * Settings.Reverse.Amount / 10
+		else
+			hrp.Velocity = velocity *
+				Vector3.new(-Settings.Reverse.Amount / 2.5, 1, -Settings.Reverse.Amount / 2.5)
+			runServ.RenderStepped:Wait()
+			hrp.Velocity = velocity
+		end
+	end
+
+	if Settings.Confusion.Enabled then
+		hrp.CFrame = cFrame *
+			CFrame.new(math.random(1, 2) == 1 and
+				Settings.Confusion.Amount
+				or -Settings.Confusion.Amount, 0, 0)
+	end
+
+	if Settings.Desync.Enabled then
+		hrp.Velocity =
+			Vector3.new(Settings.Desync.X, Settings.Desync.Y, Settings.Desync.Z)
+		hrp.CFrame = cFrame *
+			CFrame.Angles(0, math.rad(Settings.Desync.Angles), 0)
+		runServ.RenderStepped:Wait()
+		hrp.Velocity = velocity
+	end
+end)
+
+runServ.Heartbeat:Connect(function()
+	for i, Target in pairs(game.Players:GetPlayers()) do
+		if Target ~= localPlr then
+			for i, Part in pairs(Target.Character:GetDescendants()) do
+				if Settings.Resolver.Enabled and Part:IsA("BasePart") then
+					if Settings.Resolver.Type == "With Pred" then
+						Part.Velocity =
+							Target.Character.Humanoid.MoveDirection * Settings.Resolver.Prediction
+						Part.AssemblyLinearVelocity =
+							Target.Character.Humanoid.MoveDirection * Settings.Resolver.Prediction
+					else
+						Part.Velocity =
+							Part.Velocity * 0
+						Part.AssemblyLinearVelocity =
+							Part.AssemblyLinearVelocity * 0
+					end
+				end
+			end
+		end
+	end
+end)
+
+local Window =
+	library:CreateWindow("Vylix AA Hub | Actyrn#7104",
+		Vector2.new(450, 550),
+		Enum.KeyCode.RightShift)
+
+local AntiAim = Window:CreateTab("Anti-Aim")
+local Extra = Window:CreateTab("Extra")
+
+local Resolver = Extra:CreateSector("Velocity Resolver", "left")
+
+local Custom = AntiAim:CreateSector("Custom", "left")
+local VelMultiply = AntiAim:CreateSector("Velocity Multiplier", "left")
+local Confusion = AntiAim:CreateSector("Confusion", "left")
+local Desync = AntiAim:CreateSector("Desync", "left")
+
+local Up = AntiAim:CreateSector("Up", "right")
+local Down = AntiAim:CreateSector("Down", "right")
+local Reverse = AntiAim:CreateSector("Reverse", "right")
+local VelReveal = AntiAim:CreateSector("Velocity Revealer", "right")
+local LookVec = AntiAim:CreateSector("Look Vector", "right")
+
+-- Resolver
+
+local ResolverToggle = Resolver:AddToggle("Enabled", false, function(Bool)
+	Settings.Resolver.Enabled = Bool
+end)
+
+ResolverToggle:AddKeybind()
+
+Resolver:AddSlider("Prediction", 1, 16, 100, 2, function(Bool)
+	Settings.Resolver.Prediction = Bool
+end)
+
+Resolver:AddDropdown("Type", {"With Pred", "Break Pred"}, "With Pred", false, function(Bool)
+	Settings.Resolver.Type = Bool
+end)
+
+-- Velocity Revealer
+
+local VelRevealToggle = VelReveal:AddToggle("Enabled", false, function(Bool)
+	Settings.VelReveal.Enabled = Bool
+end)
+
+VelRevealToggle:AddColorpicker(Color3.fromRGB(170, 120, 210), function(Bool)
+	velDot.Color = Bool
+end)
+
+VelReveal:AddSlider("Prediction", 0.05, 0.15, 0.25, 100, function(Bool)
+	Settings.VelReveal.Prediction = Bool
+end)
+
+VelReveal:AddDropdown("Hit-Part", {"Torso", "Head"}, "Torso", false, function(Bool)
+	if Bool == "Torso" then
+		Settings.VelReveal.HitPart = "HumanoidRootPart"
+	else
+		Settings.VelReveal.HitPart = "Head"
+	end
+end)
+
+-- Custom
+
+local CustomToggle = Custom:AddToggle("Enabled", false, function(Bool)
+	Settings.Custom.Enabled = Bool
+end)
+
+CustomToggle:AddKeybind()
+
+Custom:AddTextbox("X Velocity", 69420, function(Bool)
+	Settings.Custom.X = Bool
+end)
+
+Custom:AddTextbox("Y Velocity", 69420, function(Bool)
+	Settings.Custom.Y = Bool
+end)
+
+Custom:AddTextbox("Z Velocity", 69420, function(Bool)
+	Settings.Custom.Z = Bool
+end)
+
+-- Up
+
+local UpToggle = Up:AddToggle("Enabled", false, function(Bool)
+	Settings.Up.Enabled = Bool
+end)
+
+UpToggle:AddKeybind()
+
+Up:AddSlider("Amount", 0, 690, 1000, 1, function(Bool)
+	Settings.Up.Amount = Bool
+end)
+
+-- Down
+
+local DownToggle = Down:AddToggle("Enabled", false, function(Bool)
+	Settings.Down.Enabled = Bool
+end)
+
+DownToggle:AddKeybind()
+
+Down:AddSlider("Amount", 0, 690, 1000, 1, function(Bool)
+	Settings.Down.Amount = Bool
+end)
+
+-- Vel Multiplier
+
+local VelMultiplyToggle = VelMultiply:AddToggle("Enabled", false, function(Bool)
+	Settings.VelMultiply.Enabled = Bool
+end)
+
+VelMultiplyToggle:AddKeybind()
+
+VelMultiply:AddSlider("Amount", 0, 5, 20, 2, function(Bool)
+	Settings.VelMultiply.Amount = Bool
+end)
+
+-- Look Vector
+
+local LookVecToggle = LookVec:AddToggle("Enabled", false, function(Bool)
+	Settings.LookVec.Enabled = Bool
+end)
+
+LookVecToggle:AddKeybind()
+
+LookVec:AddSlider("Amount", -1000, 420, 1000, 1, function(Bool)
+	Settings.LookVec.Amount = Bool
+end)
+
+-- Reverse
+
+local ReverseToggle = Reverse:AddToggle("Enabled", false, function(Bool)
+	Settings.Reverse.Enabled = Bool
+end)
+
+ReverseToggle:AddKeybind()
+
+Reverse:AddSlider("Amount", 0, 3, 10, 2, function(Bool)
+	Settings.Reverse.Amount = Bool
+end)
+
+Reverse:AddDropdown("Type", {"CFrame", "Velocity"}, "CFrame", false, function(Bool)
+	Settings.Reverse.Type = Bool
+end)
+
+-- Confusion
+
+local ConfusionToggle = Confusion:AddToggle("Enabled", false, function(Bool)
+	Settings.Confusion.Enabled = Bool
+end)
+
+ConfusionToggle:AddKeybind()
+
+Confusion:AddSlider("Amount", 0, 1.5, 5, 2, function(Bool)
+	Settings.Confusion.Amount = Bool
+end)
+
+-- Desync
+
+local DesyncToggle = Desync:AddToggle("Enabled", false, function(Bool)
+	Settings.Desync.Enabled = Bool
+end)
+
+DesyncToggle:AddKeybind()
+
+Desync:AddSlider("X Velocity", -10000, 6900, 10000, 1, function(Bool)
+	Settings.Desync.X = Bool
+end)
+
+Desync:AddSlider("Y Velocity", -10000, 6900, 10000, 1, function(Bool)
+	Settings.Desync.Y = Bool
+end)
+
+Desync:AddSlider("Z Velocity", -10000, 6900, 10000, 1, function(Bool)
+	Settings.Desync.Z = Bool
+end)
+
+Desync:AddSlider("CFrame Angles", -25, 0.5, 25, 2, function(Bool)
+	Settings.Desync.Angles = Bool
+end)
