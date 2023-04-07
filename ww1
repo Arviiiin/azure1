@@ -1,362 +1,222 @@
--- Source fully made by Actyrn#7104, except the UI library ofc
--- USE THE LOADSTRING FOR AUTOMATIC UPDATES!!
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local TextService = game:GetService("TextService")
 
-repeat wait() until game:IsLoaded()
+local Player = game:GetService("Players").LocalPlayer
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Arviiiin/azure2/main/ww2"))()
+local NotifGui = Instance.new("ScreenGui")
+NotifGui.Name = "AkaliNotif"
+NotifGui.Parent = RunService:IsStudio() and Player.PlayerGui or game:GetService("CoreGui")
 
-local runServ, localPlr, velDot =
-	game.RunService, game.Players.LocalPlayer, Drawing.new("Circle")
+local Container = Instance.new("Frame")
+Container.Name = "Container"
+Container.Position = UDim2.new(0, 20, 0.5, -20)
+Container.Size = UDim2.new(0, 300, 0.5, 0)
+Container.BackgroundTransparency = 1
+Container.Parent = NotifGui
+
+local function Image(ID, Button)
+	local NewImage = Instance.new(string.format("Image%s", Button and "Button" or "Label"))
+	NewImage.Image = ID
+	NewImage.BackgroundTransparency = 1
+	return NewImage
+end
+
+local function Round2px()
+	local NewImage = Image("http://www.roblox.com/asset/?id=5761488251")
+	NewImage.ScaleType = Enum.ScaleType.Slice
+	NewImage.SliceCenter = Rect.new(2, 2, 298, 298)
+	NewImage.ImageColor3 = Color3.fromRGB(30, 30, 30)
+	return NewImage
+end
+
+local function Shadow2px()
+	local NewImage = Image("http://www.roblox.com/asset/?id=5761498316")
+	NewImage.ScaleType = Enum.ScaleType.Slice
+	NewImage.SliceCenter = Rect.new(17, 17, 283, 283)
+	NewImage.Size = UDim2.fromScale(1, 1) + UDim2.fromOffset(30, 30)
+	NewImage.Position = -UDim2.fromOffset(15, 15)
+	NewImage.ImageColor3 = Color3.fromRGB(30, 30, 30)
+	return NewImage
+end
 
 library = library
-Drawing = Drawing
+__ = __
 
-local Settings = {
-	VelReveal = {
-		Enabled = nil,
-		Prediction = nil,
-		HitPart = nil
-	},
+local Padding = 10
+local DescriptionPadding = 10
+local InstructionObjects = {}
+local TweenTime = 1
+local TweenStyle = Enum.EasingStyle.Sine
+local TweenDirection = Enum.EasingDirection.Out
 
-	Custom = {
-		Enabled = nil,
-		X = nil,
-		Y = nil,
-		Z = nil
-	},
+local LastTick = tick()
 
-	Up = {
-		Enabled = nil,
-		Amount = nil
-	},
+Actyrn7104 = "Discord: Actyrn#7104, Server: .gg/wDngb2mv4H"
 
-	Down = {
-		Enabled = nil,
-		Amount = nil
-	},
+library:CheckErrors(true, true, Player, __, Actyrn7104)
 
-	VelMultiply = {
-		Enabled = nil,
-		Amount = nil
-	},
+local function CalculateBounds(TableOfObjects)
+	local TableOfObjects = typeof(TableOfObjects) == "table" and TableOfObjects or {}
+	local X, Y = 0, 0
+	for _, Object in next, TableOfObjects do
+		X += Object.AbsoluteSize.X
+		Y += Object.AbsoluteSize.Y
+	end
+	return {X = X, Y = Y, x = X, y = Y}
+end
 
-	LookVec = {
-		Enabled = nil,
-		Amount = nil
-	},
+local CachedObjects = {}
 
-	Reverse = {
-		Enabled = nil,
-		Amount = nil,
-		Type = nil
-	},
+local function Update()
+	local DeltaTime = tick() - LastTick
+	local PreviousObjects = {}
+	for CurObj, Object in next, InstructionObjects do
+		local Label, Delta, Done = Object[1], Object[2], Object[3]
+		if (not Done) then
+			if (Delta < TweenTime) then
+				Object[2] = math.clamp(Delta + DeltaTime, 0, 1)
+				Delta = Object[2]
+			else
+				Object[3] = true
+			end
+		end
+		local NewValue = TweenService:GetValue(Delta, TweenStyle, TweenDirection)
+		local CurrentPos = Label.Position
+		local PreviousBounds = CalculateBounds(PreviousObjects)
+		local TargetPos = UDim2.new(0, 0, 0, PreviousBounds.Y + (Padding * #PreviousObjects))
+		Label.Position = CurrentPos:Lerp(TargetPos, NewValue)
+		table.insert(PreviousObjects, Label)
+	end
+	CachedObjects = PreviousObjects
+	LastTick = tick()
+end
 
-	Confusion = {
-		Enabled = nil,
-		Amount = nil
-	},
+RunService:BindToRenderStep("UpdateList", 0, Update)
 
-	Desync = {
-		Enabled = nil,
-		X = nil,
-		Y = nil,
-		Z = nil,
-		Angles = nil
-	},
-
-	Resolver = {
-		Enabled = nil,
-		Prediction = nil,
-		Type = nil
-	}
+local TitleSettings = {
+	Font = Enum.Font.GothamSemibold,
+	Size = 14
 }
 
-velDot.Filled = true
-velDot.Thickness = 1
-velDot.Transparency = 1
-velDot.Radius = 6.9
+local DescriptionSettings = {
+	Font = Enum.Font.Gotham,
+	Size = 14
+}
 
-runServ.Heartbeat:Connect(function()
-	local Pos, OnScreen = workspace.CurrentCamera:WorldToViewportPoint(
-		localPlr.Character[Settings.VelReveal.HitPart].CFrame.Position +
-			(localPlr.Character[Settings.VelReveal.HitPart].AssemblyLinearVelocity *
-				Settings.VelReveal.Prediction))
+local MaxWidth = (Container.AbsoluteSize.X - Padding - DescriptionPadding)
 
-	if Settings.VelReveal.Enabled and OnScreen then
-		velDot.Visible = true
-		velDot.Position = Vector2.new(Pos.X, Pos.Y)
-	else
-		velDot.Visible = false
-	end
-end)
+local function Label(Text, Font, Size, Button)
+	local Label = Instance.new(string.format("Text%s", Button and "Button" or "Label"))
+	Label.Text = Text
+	Label.Font = Font
+	Label.TextSize = Size
+	Label.BackgroundTransparency = 1
+	Label.TextXAlignment = Enum.TextXAlignment.Left
+	Label.RichText = true
+	Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+	return Label
+end
 
-runServ.Heartbeat:Connect(function()
-	local char = localPlr.Character
-	local hrp = char.HumanoidRootPart
-	local velocity, cFrame =
-		hrp.Velocity, hrp.CFrame
+local function TitleLabel(Text)
+	return Label(Text, TitleSettings.Font, TitleSettings.Size)
+end
 
-	if Settings.Custom.Enabled then
-		hrp.Velocity =
-			Vector3.new(Settings.Custom.X, Settings.Custom.Y, Settings.Custom.Z)
-		runServ.RenderStepped:Wait()
-		hrp.Velocity = velocity
-	end
+local function DescriptionLabel(Text)
+	return Label(Text, DescriptionSettings.Font, DescriptionSettings.Size)
+end
 
-	if Settings.Up.Enabled then
-		hrp.Velocity =
-			Vector3.new(0, Settings.Up.Amount, 0)
-		runServ.RenderStepped:Wait()
-		hrp.Velocity = velocity
-	end
+local PropertyTweenOut = {
+	Text = "TextTransparency",
+	Fram = "BackgroundTransparency",
+	Imag = "ImageTransparency"
+}
 
-	if Settings.Down.Enabled then
-		hrp.Velocity =
-			Vector3.new(0, -Settings.Down.Amount, 0)
-		runServ.RenderStepped:Wait()
-		hrp.Velocity = velocity
-	end
+local function FadeProperty(Object)
+	local Prop = PropertyTweenOut[string.sub(Object.ClassName, 1, 4)]
+	TweenService:Create(Object, TweenInfo.new(0.25, TweenStyle, TweenDirection), {
+		[Prop] = 1
+	}):Play()
+end
 
-	if Settings.VelMultiply.Enabled then
-		hrp.Velocity = velocity *
-			Settings.VelMultiply.Amount
-		runServ.RenderStepped:Wait()
-		hrp.Velocity = velocity
-	end
-
-	if Settings.LookVec.Enabled then
-		hrp.Velocity = cFrame.lookVector *
-			Settings.LookVec.Amount
-		runServ.RenderStepped:Wait()
-		hrp.Velocity = velocity
-	end
-
-	if Settings.Reverse.Enabled then
-		if Settings.Reverse.Type == "CFrame" then
-			hrp.CFrame = cFrame -
-				char.Humanoid.MoveDirection * Settings.Reverse.Amount / 10
-		else
-			hrp.Velocity = velocity *
-				Vector3.new(-Settings.Reverse.Amount / 2.5, 1, -Settings.Reverse.Amount / 2.5)
-			runServ.RenderStepped:Wait()
-			hrp.Velocity = velocity
+local function SearchTableFor(Table, For)
+	for _, v in next, Table do
+		if (v == For) then
+			return true
 		end
 	end
+	return false
+end
 
-	if Settings.Confusion.Enabled then
-		hrp.CFrame = cFrame *
-			CFrame.new(math.random(1, 2) == 1 and
-				Settings.Confusion.Amount
-				or -Settings.Confusion.Amount, 0, 0)
-	end
-
-	if Settings.Desync.Enabled then
-		hrp.Velocity =
-			Vector3.new(Settings.Desync.X, Settings.Desync.Y, Settings.Desync.Z)
-		hrp.CFrame = cFrame *
-			CFrame.Angles(0, math.rad(Settings.Desync.Angles), 0)
-		runServ.RenderStepped:Wait()
-		hrp.Velocity = velocity
-	end
-end)
-
-runServ.Heartbeat:Connect(function()
-	for i, Target in pairs(game.Players:GetPlayers()) do
-		if Target ~= localPlr then
-			for i, Part in pairs(Target.Character:GetDescendants()) do
-				if Settings.Resolver.Enabled and Part:IsA("BasePart") then
-					if Settings.Resolver.Type == "With Pred" then
-						Part.Velocity =
-							Target.Character.Humanoid.MoveDirection * Settings.Resolver.Prediction
-						Part.AssemblyLinearVelocity =
-							Target.Character.Humanoid.MoveDirection * Settings.Resolver.Prediction
-					else
-						Part.Velocity =
-							Part.Velocity * 0
-						Part.AssemblyLinearVelocity =
-							Part.AssemblyLinearVelocity * 0
-					end
-				end
+local function FindIndexByDependency(Table, Dependency)
+	for Index, Object in next, Table do
+		if (typeof(Object) == "table") then
+			local Found = SearchTableFor(Object, Dependency)
+			if (Found) then
+				return Index
+			end
+		else
+			if (Object == Dependency) then
+				return Index
 			end
 		end
 	end
-end)
+end
 
-local Window =
-	library:CreateWindow("Vylix AA Hub | Actyrn#7104",
-		Vector2.new(450, 550),
-		Enum.KeyCode.RightShift)
-
-local AntiAim = Window:CreateTab("Anti-Aim")
-local Extra = Window:CreateTab("Extra")
-
-local Resolver = Extra:CreateSector("Velocity Resolver", "left")
-
-local Custom = AntiAim:CreateSector("Custom", "left")
-local VelMultiply = AntiAim:CreateSector("Velocity Multiplier", "left")
-local Confusion = AntiAim:CreateSector("Confusion", "left")
-local Desync = AntiAim:CreateSector("Desync", "left")
-
-local Up = AntiAim:CreateSector("Up", "right")
-local Down = AntiAim:CreateSector("Down", "right")
-local Reverse = AntiAim:CreateSector("Reverse", "right")
-local VelReveal = AntiAim:CreateSector("Velocity Revealer", "right")
-local LookVec = AntiAim:CreateSector("Look Vector", "right")
-
--- Resolver
-
-local ResolverToggle = Resolver:AddToggle("Enabled", false, function(Bool)
-	Settings.Resolver.Enabled = Bool
-end)
-
-ResolverToggle:AddKeybind()
-
-Resolver:AddSlider("Prediction", 1, 16, 100, 2, function(Bool)
-	Settings.Resolver.Prediction = Bool
-end)
-
-Resolver:AddDropdown("Type", {"With Pred", "Break Pred"}, "With Pred", false, function(Bool)
-	Settings.Resolver.Type = Bool
-end)
-
--- Velocity Revealer
-
-local VelRevealToggle = VelReveal:AddToggle("Enabled", false, function(Bool)
-	Settings.VelReveal.Enabled = Bool
-end)
-
-VelRevealToggle:AddColorpicker(Color3.fromRGB(170, 120, 210), function(Bool)
-	velDot.Color = Bool
-end)
-
-VelReveal:AddSlider("Prediction", 0.05, 0.15, 0.25, 100, function(Bool)
-	Settings.VelReveal.Prediction = Bool
-end)
-
-VelReveal:AddDropdown("Hit-Part", {"Torso", "Head"}, "Torso", false, function(Bool)
-	if Bool == "Torso" then
-		Settings.VelReveal.HitPart = "HumanoidRootPart"
-	else
-		Settings.VelReveal.HitPart = "Head"
+local function ResetObjects()
+	for _, Object in next, InstructionObjects do
+		Object[2] = 0
+		Object[3] = false
 	end
-end)
+end
 
--- Custom
+local function FadeOutAfter(Object, Seconds)
+	wait(Seconds)
+	FadeProperty(Object)
+	for _, SubObj in next, Object:GetDescendants() do
+		FadeProperty(SubObj)
+	end
+	wait(0.25)
+	table.remove(InstructionObjects, FindIndexByDependency(InstructionObjects, Object))
+	ResetObjects()
+end
 
-local CustomToggle = Custom:AddToggle("Enabled", false, function(Bool)
-	Settings.Custom.Enabled = Bool
-end)
-
-CustomToggle:AddKeybind()
-
-Custom:AddTextbox("X Velocity", 69420, function(Bool)
-	Settings.Custom.X = Bool
-end)
-
-Custom:AddTextbox("Y Velocity", 69420, function(Bool)
-	Settings.Custom.Y = Bool
-end)
-
-Custom:AddTextbox("Z Velocity", 69420, function(Bool)
-	Settings.Custom.Z = Bool
-end)
-
--- Up
-
-local UpToggle = Up:AddToggle("Enabled", false, function(Bool)
-	Settings.Up.Enabled = Bool
-end)
-
-UpToggle:AddKeybind()
-
-Up:AddSlider("Amount", 0, 690, 1000, 1, function(Bool)
-	Settings.Up.Amount = Bool
-end)
-
--- Down
-
-local DownToggle = Down:AddToggle("Enabled", false, function(Bool)
-	Settings.Down.Enabled = Bool
-end)
-
-DownToggle:AddKeybind()
-
-Down:AddSlider("Amount", 0, 690, 1000, 1, function(Bool)
-	Settings.Down.Amount = Bool
-end)
-
--- Vel Multiplier
-
-local VelMultiplyToggle = VelMultiply:AddToggle("Enabled", false, function(Bool)
-	Settings.VelMultiply.Enabled = Bool
-end)
-
-VelMultiplyToggle:AddKeybind()
-
-VelMultiply:AddSlider("Amount", 0, 5, 20, 2, function(Bool)
-	Settings.VelMultiply.Amount = Bool
-end)
-
--- Look Vector
-
-local LookVecToggle = LookVec:AddToggle("Enabled", false, function(Bool)
-	Settings.LookVec.Enabled = Bool
-end)
-
-LookVecToggle:AddKeybind()
-
-LookVec:AddSlider("Amount", -1000, 420, 1000, 1, function(Bool)
-	Settings.LookVec.Amount = Bool
-end)
-
--- Reverse
-
-local ReverseToggle = Reverse:AddToggle("Enabled", false, function(Bool)
-	Settings.Reverse.Enabled = Bool
-end)
-
-ReverseToggle:AddKeybind()
-
-Reverse:AddSlider("Amount", 0, 3, 10, 2, function(Bool)
-	Settings.Reverse.Amount = Bool
-end)
-
-Reverse:AddDropdown("Type", {"CFrame", "Velocity"}, "CFrame", false, function(Bool)
-	Settings.Reverse.Type = Bool
-end)
-
--- Confusion
-
-local ConfusionToggle = Confusion:AddToggle("Enabled", false, function(Bool)
-	Settings.Confusion.Enabled = Bool
-end)
-
-ConfusionToggle:AddKeybind()
-
-Confusion:AddSlider("Amount", 0, 1.5, 5, 2, function(Bool)
-	Settings.Confusion.Amount = Bool
-end)
-
--- Desync
-
-local DesyncToggle = Desync:AddToggle("Enabled", false, function(Bool)
-	Settings.Desync.Enabled = Bool
-end)
-
-DesyncToggle:AddKeybind()
-
-Desync:AddSlider("X Velocity", -10000, 6900, 10000, 1, function(Bool)
-	Settings.Desync.X = Bool
-end)
-
-Desync:AddSlider("Y Velocity", -10000, 6900, 10000, 1, function(Bool)
-	Settings.Desync.Y = Bool
-end)
-
-Desync:AddSlider("Z Velocity", -10000, 6900, 10000, 1, function(Bool)
-	Settings.Desync.Z = Bool
-end)
-
-Desync:AddSlider("CFrame Angles", -25, 0.5, 25, 2, function(Bool)
-	Settings.Desync.Angles = Bool
-end)
+return {
+	Notify = function(Properties)
+		local Properties = typeof(Properties) == "table" and Properties or {}
+		local Title = Properties.Title
+		local Description = Properties.Description
+		local Duration = Properties.Duration or 5
+		if (Title) or (Description) then -- Check that user has provided title and/or description
+			local Y = Title and 26 or 0
+			if (Description) then
+				local TextSize = TextService:GetTextSize(Description, DescriptionSettings.Size, DescriptionSettings.Font, Vector2.new(0, 0))
+				for i = 1, math.ceil(TextSize.X / MaxWidth) do
+					Y += TextSize.Y
+				end
+				Y += 8
+			end
+			local NewLabel = Round2px()
+			NewLabel.Size = UDim2.new(1, 0, 0, Y)
+			NewLabel.Position = UDim2.new(-1, 20, 0, CalculateBounds(CachedObjects).Y + (Padding * #CachedObjects))
+			if (Title) then
+				local NewTitle = TitleLabel(Title)
+				NewTitle.Size = UDim2.new(1, -10, 0, 26)
+				NewTitle.Position = UDim2.fromOffset(10, 0)
+				NewTitle.Parent = NewLabel
+			end
+			if (Description) then
+				local NewDescription = DescriptionLabel(Description)
+				NewDescription.TextWrapped = true
+				NewDescription.Size = UDim2.fromScale(1, 1) + UDim2.fromOffset(-DescriptionPadding, Title and -26 or 0)
+				NewDescription.Position = UDim2.fromOffset(10, Title and 26 or 0)
+				NewDescription.TextYAlignment = Enum.TextYAlignment[Title and "Top" or "Center"]
+				NewDescription.Parent = NewLabel
+			end
+			Shadow2px().Parent = NewLabel
+			NewLabel.Parent = Container
+			table.insert(InstructionObjects, {NewLabel, 0, false})
+			coroutine.wrap(FadeOutAfter)(NewLabel, Duration)
+		end
+	end,
+}
